@@ -11,78 +11,104 @@ from pptx.enum.text import PP_ALIGN
 import subprocess
 
 def parse_markdown(file_path):
+    # 打开并读取Markdown文件
     with open(file_path, 'r', encoding='utf-8') as file:
         content = file.read()
     
-    slides = []
-    current_slide = {'type': None, 'title': None, 'content': []}
+    slides = []  # 存储所有幻灯片
+    current_slide = {'type': None, 'title': None, 'content': []}  # 当前处理的幻灯片
     
-    lines = content.split('\n')
-    subtitle_count = 0
-    content_count = 0
-    subcontent_count = 0
-    last_content_type = None
-    has_cover = False
-    chapters = []
+    lines = content.split('\n')  # 将内容分割成行
+    subtitle_count = 0  # 四级标题计数
+    content_count = 0  # 内容计数
+    subcontent_count = 0  # 子内容计数
+    last_content_type = None  # 上一个内容的类型
+    has_cover = False  # 是否有封面
+    chapters = []  # 存储章节标题
     
+    def process_content(line, current_content):
+        # 检测列表项
+        if line.lstrip().startswith(('- ', '* ', '+ ', '1. ', '2. ', '3. ')):
+            # 如果是标准列表项,只缩进四个空格
+            indent = '    '
+            line = indent + line.lstrip()
+        elif line.startswith('\t'):  # 检测 TAB 缩进
+            # 如果是 TAB 缩进的列表项,替换 TAB 为两个空格
+            line = '    ' + line.lstrip('\t')
+
+        # 如果当前内容不为空,添加新行;否则直接返回当前行
+        if current_content:
+            return current_content + '\n' + line
+        else:
+            return line
+
     for line in lines:
-        if line.startswith('# '):
+        if line.startswith('# '):  # 一级标题:封面
             if current_slide['type']:
                 slides.append(current_slide)
             current_slide = {'type': 'cover', 'title': line[2:], 'content': []}
             has_cover = True
-            subtitle_count = 0
-            content_count = 0
-            subcontent_count = 0
+            subtitle_count = content_count = subcontent_count = 0
             last_content_type = None
-        elif line.startswith('## '):
+        elif line.startswith('## '):  # 二级标题:章节
             if current_slide['type']:
                 slides.append(current_slide)
             current_slide = {'type': 'chapter', 'title': line[3:], 'content': []}
-            chapters.append(line[3:])  # 将章节标题添加到目录列表
-            subtitle_count = 0
-            content_count = 0
-            subcontent_count = 0
+            chapters.append(line[3:])
+            subtitle_count = content_count = subcontent_count = 0
             last_content_type = None
-        elif line.startswith('### '):
+        elif line.startswith('### '):  # 三级标题:主要内容
             if current_slide['type']:
                 slides.append(current_slide)
             current_slide = {'type': 'substance', 'title': line[4:], 'content': []}
-            subtitle_count = 0
-            content_count = 0
-            subcontent_count = 0
+            subtitle_count = content_count = subcontent_count = 0
             last_content_type = None
-        elif line.startswith('#### '):
+        elif line.startswith('#### '):  # 四级标题:子标题
             subtitle_count += 1
             current_slide['content'].append((f'subtitle{subtitle_count:02d}', line[5:]))
+            subcontent_count = 0
             last_content_type = 'subtitle'
-        elif line.strip() == '---':
+        elif line.strip() == '---':  # 分隔线:翻译幻灯片
             if current_slide['type']:
                 slides.append(current_slide)
             current_slide = {'type': 'translate', 'title': None, 'content': []}
-            subtitle_count = 0
-            content_count = 0
-            subcontent_count = 0
+            subtitle_count = content_count = subcontent_count = 0
             last_content_type = None
-        elif line.strip():
-            if last_content_type == 'subtitle':
-                subcontent_count += 1
-                current_slide['content'].append((f'subcontent{subcontent_count:02d}', line))
+        elif line.strip():  # 非空行:内容
+            if current_slide['type'] in ['substance', 'chapter']:
+                if last_content_type == 'subtitle' or subcontent_count > 0:
+                    subcontent_count += 1
+                    content_key = f'subcontent{subtitle_count:02d}'
+                    processed_line = process_content(line, '')
+                    if subcontent_count == 1:
+                        current_slide['content'].append((content_key, processed_line))
+                    else:
+                        current_content = current_slide['content'][-1]
+                        current_slide['content'][-1] = (current_content[0], process_content(processed_line, current_content[1]))
+                else:
+                    content_count += 1
+                    content_key = f'content{content_count:02d}'
+                    if content_count == 1 or last_content_type != 'content':
+                        current_slide['content'].append((content_key, process_content(line, '')))
+                    else:
+                        current_content = current_slide['content'][-1]
+                        current_slide['content'][-1] = (current_content[0], process_content(line, current_content[1]))
             else:
                 content_count += 1
-                current_slide['content'].append((f'content{content_count:02d}', line))
+                current_slide['content'].append((f'content{content_count:02d}', process_content(line, '')))
             last_content_type = 'content'
     
+    # 添加最后一个幻灯片
     if current_slide['type']:
         slides.append(current_slide)
     
-    # 确保目录页在封面之后
+    # 如果有封面,在封面后添加目录
     if has_cover:
         toc_slide = {'type': 'toc', 'title': '目录', 'content': [('content01', '\n'.join(chapters))]}
         slides.insert(1, toc_slide)
     
     # 打印检测内容
-    print("解析结果：")
+    print("解析结果:")
     for i, slide in enumerate(slides):
         print(f"幻灯片 {i+1}:")
         print(f"  类型: {slide['type']}")
@@ -247,10 +273,10 @@ class PPTGeneratorGUI:
         master.geometry("670x280")
 
         # 设置图标
-        icon_path = os.path.join(os.path.dirname(__file__), "Image", "logo.ico")
+        icon_path = os.path.join(os.path.dirname(__file__), "Image", "logo.png")
         if os.path.exists(icon_path):
             icon = PhotoImage(file=icon_path)
-            master.iconphoto(True, icon)
+            self.master.iconphoto(False, icon)
 
         style = ttk.Style()
         
