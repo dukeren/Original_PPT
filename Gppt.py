@@ -1,10 +1,11 @@
 import os
 import re
+import sys
 import random
-import tkinter as tk
-from tkinter import PhotoImage
-from tkinter import ttk, filedialog, messagebox
-from ttkthemes import ThemedTk
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+                             QLabel, QLineEdit, QPushButton, QFileDialog, QMessageBox)
+from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtCore import Qt
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN
@@ -266,113 +267,144 @@ def find_placeholder(slide, content_type):
     print(f"No placeholder found for {content_type}")
     return None
 
-class PPTGeneratorGUI:
-    def __init__(self, master):
-        self.master = master
-        master.title("PPT生成 By 渡客")
-        master.geometry("670x280")
+class PPTGeneratorGUI(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
 
-        # 设置图标
+    def initUI(self):
+        self.setWindowTitle("PPT生成 By 渡客")
+        self.setGeometry(100, 100, 700, 300)  # 稍微增加窗口大小
+
+        # Set icon
         icon_path = os.path.join(os.path.dirname(__file__), "Image", "logo.png")
         if os.path.exists(icon_path):
-            icon = PhotoImage(file=icon_path)
-            self.master.iconphoto(False, icon)
+            self.setWindowIcon(QIcon(icon_path))
 
-        style = ttk.Style()
-        
-        # 配置样式
-        style.configure('TLabel', font=('Helvetica', 12))
-        style.configure('TButton', font=('Helvetica', 12))
-        style.configure('TEntry', font=('Helvetica', 12))
-
-        # 主框架
-        main_frame = ttk.Frame(master, padding="20 20 20 20")
-        main_frame.grid(column=0, row=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        master.columnconfigure(0, weight=1)
-        master.rowconfigure(0, weight=1)
+        # Main widget and layout
+        central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(20, 50, 20, 20)  # 设置主布局的边距
+        main_layout.setSpacing(15)  # 设置主布局中小部件之间的间距
 
         # Markdown file
-        ttk.Label(main_frame, text="Markdown 文件:").grid(row=0, column=0, sticky=tk.E, padx=5, pady=5)
-        self.markdown_entry = ttk.Entry(main_frame, width=50)
-        self.markdown_entry.grid(row=0, column=1, padx=5, pady=5)
-        ttk.Button(main_frame, text="浏览", command=self.browse_markdown).grid(row=0, column=2, padx=5, pady=5)
+        markdown_layout = QHBoxLayout()
+        markdown_layout.setSpacing(10)  # 设置水平布局中小部件之间的间距
+        markdown_label = QLabel("Markdown文件:")
+        self.markdown_entry = QLineEdit()
+        markdown_button = QPushButton("浏览")
+        markdown_button.clicked.connect(self.browse_markdown)
+        markdown_layout.addWidget(markdown_label)
+        markdown_layout.addWidget(self.markdown_entry)
+        markdown_layout.addWidget(markdown_button)
+        main_layout.addLayout(markdown_layout)
 
         # Template file
-        ttk.Label(main_frame, text="PPT 参考模板:").grid(row=1, column=0, sticky=tk.E, padx=5, pady=5)
-        self.template_entry = ttk.Entry(main_frame, width=50)
-        self.template_entry.grid(row=1, column=1, padx=5, pady=5)
-        ttk.Button(main_frame, text="浏览", command=self.browse_template).grid(row=1, column=2, padx=5, pady=5)
+        template_layout = QHBoxLayout()
+        template_layout.setSpacing(10)
+        template_label = QLabel("PPT 参考模板:")
+        self.template_entry = QLineEdit()
+        template_button = QPushButton("浏览")
+        template_button.clicked.connect(self.browse_template)
+        template_layout.addWidget(template_label)
+        template_layout.addWidget(self.template_entry)
+        template_layout.addWidget(template_button)
+        main_layout.addLayout(template_layout)
 
         # Output directory
-        ttk.Label(main_frame, text="文件保存路径:").grid(row=2, column=0, sticky=tk.E, padx=5, pady=5)
-        self.output_entry = ttk.Entry(main_frame, width=50)
-        self.output_entry.grid(row=2, column=1, padx=5, pady=5)
-        ttk.Button(main_frame, text="浏览", command=self.browse_output).grid(row=2, column=2, padx=5, pady=5)
+        output_layout = QHBoxLayout()
+        output_layout.setSpacing(10)
+        output_label = QLabel("文件保存路径:")
+        self.output_entry = QLineEdit()
+        output_button = QPushButton("浏览")
+        output_button.clicked.connect(self.browse_output)
+        output_layout.addWidget(output_label)
+        output_layout.addWidget(self.output_entry)
+        output_layout.addWidget(output_button)
+        main_layout.addLayout(output_layout)
 
-        # Submit button
-        ttk.Button(main_frame, text="生成 PPT", command=self.generate_ppt).grid(row=3, column=1, pady=20)
+        # Add some vertical space
+        main_layout.addSpacing(20)
 
-        # 使用说明链接
-        self.help_link = ttk.Label(main_frame, text="使用说明", cursor="hand2", foreground="blue")
-        self.help_link.grid(row=4, column=2, sticky=tk.SE, padx=5, pady=5)
-        self.help_link.bind("<Button-1>", self.open_readme)
+        # Generate button
+        generate_button = QPushButton("一键生成 PPT")
+        generate_button.clicked.connect(self.generate_ppt)
+        generate_button.setFixedSize(200, 40)  # 设置按钮大小
+        main_layout.addWidget(generate_button, alignment=Qt.AlignCenter)
 
-        # 为链接添加下划线 (使用 font 参数)
-        self.help_link.configure(font=('Helvetica', 12, 'underline'))
+        # Add some vertical space
+        main_layout.addSpacing(10)
 
-    def open_readme(self, event):
-        readme_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "readme.md")
-        if os.path.exists(readme_path):
-            if os.name == 'nt':  # Windows
-                os.startfile(readme_path)
-            elif os.name == 'posix':  # macOS and Linux
-                try:
-                    subprocess.call(['open', readme_path])  # macOS
-                except:
-                    subprocess.call(['xdg-open', readme_path])  # Linux
-        else:
-            messagebox.showerror("Error", "readme.md file not found.")
+        # Help link
+        help_link = QLabel("使用说明")
+        help_link.setStyleSheet("color: blue; text-decoration: underline;")
+        help_link.setCursor(Qt.PointingHandCursor)
+        help_link.mousePressEvent = self.open_readme
+        main_layout.addWidget(help_link, alignment=Qt.AlignRight)
+
+        # Set font
+        font = QFont("Helvetica", 12)
+        self.setFont(font)
+
+        # Set style sheet for better looking buttons and entries
+        self.setStyleSheet("""
+            QPushButton {
+                padding: 5px 10px;
+                background-color: #f0f0f0;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+            QLineEdit {
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+            }
+        """)
 
     def browse_markdown(self):
-        filename = filedialog.askopenfilename(filetypes=[("Markdown Files", "*.md")])
-        self.markdown_entry.delete(0, tk.END)
-        self.markdown_entry.insert(0, filename)
+        filename, _ = QFileDialog.getOpenFileName(self, "选择Markdown文件", "", "Markdown Files (*.md)")
+        if filename:
+            self.markdown_entry.setText(filename)
 
     def browse_template(self):
-        filename = filedialog.askopenfilename(filetypes=[("PowerPoint Files", "*.pptx")])
-        self.template_entry.delete(0, tk.END)
-        self.template_entry.insert(0, filename)
+        filename, _ = QFileDialog.getOpenFileName(self, "选择PPT模板", "", "PowerPoint Files (*.pptx)")
+        if filename:
+            self.template_entry.setText(filename)
 
     def browse_output(self):
-        directory = filedialog.askdirectory()
-        self.output_entry.delete(0, tk.END)
-        self.output_entry.insert(0, directory)
+        directory = QFileDialog.getExistingDirectory(self, "选择保存路径")
+        if directory:
+            self.output_entry.setText(directory)
 
     def generate_ppt(self):
-        markdown_file = self.markdown_entry.get()
-        template_file = self.template_entry.get()
-        output_directory = self.output_entry.get()
+        markdown_file = self.markdown_entry.text()
+        template_file = self.template_entry.text()
+        output_directory = self.output_entry.text()
 
-        # 检查并处理输入
+        # Check and process inputs
         if not markdown_file:
             markdown_file = 'Input/input.md'
             if not os.path.exists(markdown_file):
-                messagebox.showerror("Error", f"Default markdown file '{markdown_file}' not found.")
+                QMessageBox.critical(self, "错误", f"默认的Markdown文件 '{markdown_file}' 未找到。")
                 return
-            self.markdown_entry.insert(0, markdown_file)
+            self.markdown_entry.setText(markdown_file)
 
         if not template_file:
             template_file = 'Model_PPT/Model.pptx'
             if not os.path.exists(template_file):
-                messagebox.showerror("Error", f"Default template file '{template_file}' not found.")
+                QMessageBox.critical(self, "错误", f"默认的模板文件 '{template_file}' 未找到。")
                 return
-            self.template_entry.insert(0, template_file)
+            self.template_entry.setText(template_file)
 
         if not output_directory:
             output_directory = 'Outfile'
             if not os.path.exists(output_directory):
                 os.makedirs(output_directory)
-            self.output_entry.insert(0, output_directory)
+            self.output_entry.setText(output_directory)
 
         try:
             # Generate a default output filename
@@ -388,12 +420,12 @@ class PPTGeneratorGUI:
 
             slides = parse_markdown(markdown_file)
             create_pptx(slides, template_file, output_path)
-            messagebox.showinfo("Success", f"PPT generated successfully: {output_path}")
+            QMessageBox.information(self, "成功", f"PPT生成成功: {output_path}")
             
             # 自动打开生成文件的目录
             self.open_output_directory(output_directory)
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {str(e)}")
+            QMessageBox.critical(self, "错误", f"发生错误: {str(e)}")
 
     def open_output_directory(self, path):
         if os.path.exists(path):
@@ -405,9 +437,32 @@ class PPTGeneratorGUI:
                 except:
                     subprocess.call(['xdg-open', path])  # Linux
         else:
-            messagebox.showerror("Error", f"Directory not found: {path}")
+            QMessageBox.critical(self, "错误", f"目录未找到: {path}")
+
+    def open_readme(self, event):
+        if getattr(sys, 'frozen', False):
+            # If it's a packaged executable
+            application_path = sys._MEIPASS
+        else:
+            # If it's a script
+            application_path = os.path.dirname(os.path.abspath(__file__))
+        
+        readme_path = os.path.join(application_path, "readme.md")
+        
+        if os.path.exists(readme_path):
+            if os.name == 'nt':  # Windows
+                os.startfile(readme_path)
+            elif os.name == 'posix':  # macOS and Linux
+                try:
+                    subprocess.call(['open', readme_path])  # macOS
+                except:
+                    subprocess.call(['xdg-open', readme_path])  # Linux
+        else:
+            QMessageBox.critical(self, "错误", f"readme.md 文件未在 {readme_path} 找到")
 
 if __name__ == "__main__":
-    root = ThemedTk(theme="ubuntu") # ttkthemes主题 ： breeze，plastik，clearlooks，elegance，radiance，keramik，black，blue，aquativo，kroc，winxpblue，yaru，itft1，smog，adapta，ubuntu，arc，equilux
-    gui = PPTGeneratorGUI(root)
-    root.mainloop()
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")  # Set Fusion style
+    gui = PPTGeneratorGUI()
+    gui.show()
+    sys.exit(app.exec_())

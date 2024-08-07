@@ -1,0 +1,26 @@
+{
+    "ollama": {
+        "url": "http://localhost:11434/api/generate",
+        "model": "llama3.1"
+    },
+    "chatgpt": {
+        "api_key": "your-openai-api-key",
+        "model": "gpt-3.5-turbo"
+    },
+    "comfyui": {
+        "base_url": "http://127.0.0.1:8188",
+        "workflow_path": "./Input/workflow.json",
+        "client_id": "ppt_image_generator"
+    },
+    "dalle": {
+        "api_key": "your-actual-api-key-here",
+        "image_count": 1,
+        "image_size": "1920x1080"
+    },
+    "pixabay": {
+        "api_key": "45150991-e884f141e6b0572ce7e2f3034"
+    },
+    "unsplash": {
+        "access_key": "YOUR_UNSPLASH_ACCESS_KEY"
+    }
+}

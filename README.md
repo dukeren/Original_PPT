@@ -7,6 +7,14 @@ Gppt.exe
 
 默认参考MD文件在Input/input.md，默认参考PPT模板为Model_PPT/Model.pptx，可根据需要自定义。
 
+Gimage.exe
+
+PPT图片生成文件，主要依赖Ollama与Comfyui本地部署UI，另外可以自行设置ChatGPT与DALL-E参数。
+
+网站生成方面，目前我默认了我自己申请的Pixabay的API参数，可以测试，但请不要一直使用，有额度限制，我自己还要进行测试，请去Pixabay官网申请自己的API。
+
+所有参数，均可在config.json中设置。
+
 modifySinglePPT.exe
 
 单页PPT布局修改
